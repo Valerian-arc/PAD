@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+option csharp_namespace = "MessageBrokerGrpc";
+
+package messagebroker;
+
+// Aceeași arhitectură logică Sender -> Broker -> Receiver ca la Partea 1,
+// dar transportul brut peste socket este înlocuit cu apeluri RPC (gRPC).
+// Reprezentarea datelor: Protocol Buffers (proto), conform cerinței 2.2.
+service MessageBrokerService {
+  // Sender-ul se anunță la pornire (nume), ca Broker-ul să-l poată loga
+  // împreună cu adresa IP:port, la fel ca la Partea 1. Servește și ca
+  // verificare că Broker-ul e pornit.
+  rpc Connect (ConnectRequest) returns (ConnectReply);
+
+  // Sender-ul se anunță la ieșire.
+  rpc Disconnect (ConnectRequest) returns (ConnectReply);
+
+  // Sender-ul (Publisher) publică un mesaj pe un subiect (topic).
+  rpc Publish (PublishRequest) returns (PublishReply);
+
+  // Receiver-ul (Subscriber) se abonează la un subiect și primește un
+  // flux (stream) continuu de mesaje noi publicate pe acel subiect.
+  rpc Subscribe (SubscribeRequest) returns (stream MessageEvent);
+}
+
+// Tipul mesajului (cerința 1.1). Broker-ul îl parsează și îl validează;
+// valoarea 0 (nespecificat) e tratată ca TEXT.
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  TEXT = 1;
+  COMMAND = 2;
+  NOTIFICATION = 3;
+}
+
+message ConnectRequest {
+  string name = 1;
+}
+
+message ConnectReply {
+  bool ok = 1;
+}
+
+message PublishRequest {
+  string topic = 1;
+  string sender = 2;
+  string payload = 3;
+  MessageType type = 4;
+}
+
+message PublishReply {
+  bool accepted = 1;
+  string message_id = 2;
+}
+
+message SubscribeRequest {
+  string topic = 1;
+  string name = 2;
+}
+
+message MessageEvent {
+  string id = 1;
+  string topic = 2;
+  string sender = 3;
+  string payload = 4;
+  MessageType type = 5;
+  string timestamp = 6;
+}
